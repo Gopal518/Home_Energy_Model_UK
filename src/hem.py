@@ -685,7 +685,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--epw-file', '-w',
         action='store',
-        default="/home/ml/HarshSir/GBR_ENG_Southampton.epw",
+        default="GBR_ENG_Southampton.epw",
         help=('path to weather file in .epw format'),
         )
     parser.add_argument(
@@ -778,7 +778,7 @@ if __name__ == '__main__':
     cli_args = parser.parse_args()
 
     inp_filenames = ["test/demo_files/core/demo.json"]
-    epw_filename = "/home/ml/HarshSir/GBR_ENG_Southampton.epw"
+    epw_filename = "GBR_ENG_Southampton.epw"
     cibse_weather_filename = cli_args.CIBSE_weather_file
     fhs_assumptions = cli_args.future_homes_standard
     fhs_FEE_assumptions = cli_args.future_homes_standard_FEE
