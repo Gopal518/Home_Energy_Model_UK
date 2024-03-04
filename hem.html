@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>hem.html</title>
+        <style type="text/css">
+          .end-element { fill : #FFCCFF; }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.17.1/flowchart.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+        <!-- <script src="../release/flowchart.min.js"></script> -->
+        <script>
+
+            window.onload = function () {
+                var btn = document.getElementById("run"),
+                    cd = document.getElementById("code"),
+                    chart;
+                    
+                (btn.onclick = function () {
+                    var code = cd.value;
+
+                    if (chart) {
+                      chart.clean();
+                    }
+
+                    chart = flowchart.parse(code);
+                    chart.drawSVG('canvas', {
+                      'x': 0,
+                      'y': 0,
+                      'line-width': 3,
+                      //'maxWidth': 15,//ensures the flowcharts fits within a certain width
+                      'line-length': 50,
+                      'text-margin': 10,
+                      'font-size': 14,
+                      'font': 'normal',
+                      'font-family': 'Helvetica',
+                      'font-weight': 'normal',
+                      'font-color': 'black',
+                      'line-color': 'black',
+                      'element-color': 'black',
+                      'fill': 'white',
+                      'yes-text': 'yes',
+                      'no-text': 'no',
+                      'arrow-end': 'block',
+                      'scale': 1,
+                      'symbols': {
+                        'start': {
+                          'font-size': 14,
+                          'font-color': 'yellow',
+                          'element-color': 'blue',
+                          'fill': 'green',
+                          'class': 'start-element'
+                        },
+                        'inputoutput': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'bisque'
+                        },
+                        'operation': {
+                          'font-color': 'black',
+                          'element-color': 'black',
+                          'fill': 'linen'
+                        },
+                        'subroutine': {
+                          'font-color': 'black',
+                          'element-color': 'blue',
+                          'fill': 'lightgreen'
+                        },
+                        'condition': {
+                          'font-color': 'red',
+                          'element-color': 'black',
+                          'fill': 'yellow'
+                        },
+                        'end':{
+                          'font-size': 20,
+                          'class': 'end-element'
+                        }
+                      },
+                      'flowstate' : {
+                        //'past' : { 'fill' : '#CCCCCC', 'font-size' : 12},
+                        //'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
+                        //'future' : { 'fill' : '#FFFF99'},
+                        'request' : { 'fill' : 'blue'},
+                        'invalid': {'fill' : '#444444'},
+                        'approved' : { 'fill' : '#58C4A3', 'font-size' : 12, 'yes-text' : 'APPROVED', 'no-text' : 'n/a' },
+                        'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
+                      }
+                    });
+                    //create base64 encoding of SVG to generate download link for title(without html or htm).SVG
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+
+                    const OUTsvgBASE64 = btoa(currentDrawSVG)
+                    doctitle = document.title.replace('.html','');
+                    doctitle = doctitle.replace('.htm','');
+
+
+                    var currentCanvasDIV = document.getElementById('canvas')
+                    var currentDrawSVG = currentCanvasDIV.innerHTML.replaceAll('ë','e');
+                    svgSource = currentDrawSVG
+                    svgXML = currentDrawSVG;
+                    // Use SVG Height and Width from the SVG XML to set canvas size
+                    svgXMLsubstringHeight = svgXML.substring(svgXML.indexOf('height='), svgXML.indexOf('version='));
+                    svgXMLsubstringWidth = svgXML.substring(svgXML.indexOf('width='), svgXML.indexOf('xmlns='));
+                    HeightValue = svgXMLsubstringHeight.substring(svgXMLsubstringHeight.indexOf('"')+1,svgXMLsubstringHeight.lastIndexOf('"'));
+                    WidthValue = svgXMLsubstringWidth.substring(svgXMLsubstringWidth.indexOf('"')+1,svgXMLsubstringWidth.lastIndexOf('"'));
+                    HeightValueInt = Math.round(HeightValue)
+                    WidthValueInt = Math.round(WidthValue)
+                    // setup input for base64SvgToBase64Png
+                    let svgSrc = "data:image/svg+xml;base64,"+OUTsvgBASE64;
+                    var pngBase
+                    imageUtil.base64SvgToBase64Png(svgSrc, WidthValueInt, HeightValueInt).then(pngSrc => {
+                    pngBase = pngSrc
+                    // output download link for base64 PNG converted on download from base64
+                    var pngOutHtml = `<a href="${pngBase}" download="${doctitle}.png">PNG - Click here to download current rendered flowchart as ${doctitle}.png</a>`
+                    document.getElementById("pngbase64").innerHTML=pngOutHtml;
+                    });    
+                    // output download link for base64 SVG converted on download from base64
+                    var svgOutHtml = `<a href="data:image/svg+xml;base64,${OUTsvgBASE64}" download=${doctitle}.svg>SVG - Click here to download current rendered flowchart as ${doctitle}.svg</a> `
+                        document.getElementById("svgbase64").innerHTML=svgOutHtml;
+                    })();
+
+                            };
+                 
+
+// derived from https://stackoverflow.com/a/64800570
+// we need to use web browser canvas to generate a image. In this case png
+let imageUtil = {};
+/**
+ * converts a base64 encoded data url SVG image to a PNG image
+ * @param originalBase64 data url of svg image
+ * @param width target width in pixel of PNG image
+ * @param secondTry used internally to prevent endless recursion
+ * @return {Promise<unknown>} resolves to png data url of the image
+ */
+imageUtil.base64SvgToBase64Png = function (originalBase64, width, height, secondTry) {
+    return new Promise(resolve => {
+        let img = document.createElement('img');
+        img.onload = function () {
+            if (!secondTry && (img.naturalWidth === 0 || img.naturalHeight === 0)) {
+                let svgDoc = base64ToSvgDocument(originalBase64);
+                let fixedDoc = fixSvgDocumentFF(svgDoc);
+                return imageUtil.base64SvgToBase64Png(svgDocumentToBase64(fixedDoc), width, height, true).then(result => {
+                    resolve(result);
+                });
+            }
+            //document.body.appendChild(img);
+            let canvas2 = document.createElement("canvas");
+            //document.body.removeChild(img);
+            canvas2.width = width;
+            canvas2.height = height;
+            let ctx = canvas2.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas2.width, canvas2.height);
+            try {
+                let data = canvas2.toDataURL('image/png');
+                resolve(data);
+            } catch (e) {
+                resolve(null);
+            }
+        };
+        img.src = originalBase64;
+    });
+}
+
+//needed because Firefox doesn't correctly handle SVG with size = 0, see https://bugzilla.mozilla.org/show_bug.cgi?id=700533
+function fixSvgDocumentFF(svgDocument) {
+    try {
+        let widthInt = parseInt(svgDocument.documentElement.width.baseVal.value) || 500;
+        let heightInt = parseInt(svgDocument.documentElement.height.baseVal.value) || 500;
+        svgDocument.documentElement.width.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, widthInt);
+        svgDocument.documentElement.height.baseVal.newValueSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX, heightInt);
+        return svgDocument;
+    } catch (e) {
+        return svgDocument;
+    }
+}
+
+function svgDocumentToBase64(svgDocument) {
+    try {
+        let base64EncodedSVG = btoa(new XMLSerializer().serializeToString(svgDocument));
+        return 'data:image/svg+xml;base64,' + base64EncodedSVG;
+    } catch (e) {
+        return null;
+    }
+}
+
+function base64ToSvgDocument(base64) {
+    let svg = atob(base64.substring(base64.indexOf('base64,') + 7));
+    svg = svg.substring(svg.indexOf('<svg'));
+    let parser = new DOMParser();
+    return parser.parseFromString(svg, "image/svg+xml");
+} 
+        </script>
+
+        <script>
+            function HelpText() {
+              var x = document.getElementById("HelpTextBlock");
+              if (x.style.display === "none") {
+                x.style.display = "block";
+              } else {
+                x.style.display = "none";
+              }
+            }
+        </script>
+    </head>
+    <body>
+        <div><textarea id="code" style="width: 100%;" rows="11">op2=>operation: '\nThis module provides the entry point to the program and defines the command-line interface.\n'
+op4=>operation: import sys
+op6=>operation: import json
+op8=>operation: import csv
+op10=>operation: import os
+op12=>operation: import shutil
+op14=>operation: import argparse
+op16=>operation: from math import floor
+op18=>operation: import numpy as np
+op20=>operation: from core.project import Project
+op22=>operation: import core.units as units
+op24=>operation: from read_weather_file import weather_data_to_dict
+op26=>operation: from read_CIBSE_weather_file import CIBSE_weather_data_to_dict
+op28=>operation: from wrappers.future_homes_standard.future_homes_standard import apply_fhs_preprocessing, apply_fhs_postprocessing
+op30=>operation: from wrappers.future_homes_standard.future_homes_standard_notional import apply_fhs_not_preprocessing
+op32=>operation: from wrappers.future_homes_standard.future_homes_standard_FEE import apply_fhs_FEE_preprocessing, apply_fhs_FEE_postprocessing
+st35=>start: start run_project
+io37=>inputoutput: input: inp_filename, external_conditions_dict, preproc_only, fhs_assumptions, fhs_FEE_assumptions, fhs_notA_assumptions, fhs_notB_assumptions, fhs_FEE_notA_assumptions, fhs_FEE_notB_assumptions, heat_balance, detailed_output_heating_cooling, use_fast_solver
+op40=>operation: file_name = os.path.splitext(os.path.basename(inp_filename))[0]
+op42=>operation: file_path = os.path.splitext(os.path.abspath(inp_filename))[0]
+op44=>operation: results_folder = os.path.join((file_path + '__results'), '')
+sub46=>subroutine: os.makedirs(results_folder, exist_ok=True)
+cond49=>condition: if fhs_assumptions
+op53=>operation: output_file_run_name = 'FHS'
+op110=>operation: output_file_name_stub = ((((results_folder + file_name) + '__') + output_file_run_name) + '__')
+op112=>operation: output_file_detailed = (output_file_name_stub + 'results.csv')
+op114=>operation: output_file_static = (output_file_name_stub + 'results_static.csv')
+op116=>operation: output_file_summary = (output_file_name_stub + 'results_summary.csv')
+op118=>operation: with open(inp_filename) as json_file:
+    project_dict = json.load(json_file)
+cond121=>condition: if (external_conditions_dict is not None)
+op125=>operation: shading_segments = project_dict['ExternalConditions']['shading_segments']
+op127=>operation: project_dict['ExternalConditions'] = external_conditions_dict
+op129=>operation: project_dict['ExternalConditions']['shading_segments'] = shading_segments
+cond135=>condition: if (fhs_notA_assumptions or fhs_notB_assumptions or fhs_FEE_notA_assumptions or fhs_FEE_notB_assumptions)
+sub139=>subroutine: print('applying_fhs_not_preprocessing')
+op141=>operation: project_dict = apply_fhs_not_preprocessing(project_dict, fhs_notA_assumptions, fhs_notB_assumptions, fhs_FEE_notA_assumptions, fhs_FEE_notB_assumptions)
+cond147=>condition: if (fhs_assumptions or fhs_notA_assumptions or fhs_notB_assumptions)
+op151=>operation: project_dict = apply_fhs_preprocessing(project_dict)
+cond168=>condition: if preproc_only
+op172=>operation: preproc_file_name = (output_file_name_stub + 'preproc.json')
+op174=>operation: with open(preproc_file_name, 'w') as preproc_file:
+    json.dump(project_dict, preproc_file, sort_keys=True, indent=4)
+sub176=>subroutine: shutil.copy2(inp_filename, results_folder)
+e179=>end: end function return
+op185=>operation: project = Project(project_dict, heat_balance, detailed_output_heating_cooling, use_fast_solver)
+op187=>operation: (heat_trans_coeff, heat_loss_param, HTC_dict, HLP_dict) = project.calc_HTC_HLP()
+op189=>operation: heat_capacity_param = project.calc_HCP()
+op191=>operation: heat_loss_form_factor = project.calc_HLFF()
+sub193=>subroutine: write_static_output_file(output_file_static, heat_trans_coeff, heat_loss_param, heat_capacity_param, heat_loss_form_factor)
+op195=>operation: (timestep_array, results_totals, results_end_user, energy_import, energy_export, energy_generated_consumed, energy_to_storage, energy_from_storage, energy_diverted, betafactor, zone_dict, zone_list, hc_system_dict, hot_water_dict, heat_cop_dict, cool_cop_dict, dhw_cop_dict, ductwork_gains, heat_balance_dict, heat_source_wet_results_dict, heat_source_wet_results_annual_dict) = project.run()
+sub197=>subroutine: write_core_output_file(output_file_detailed, timestep_array, results_totals, results_end_user, energy_import, energy_export, energy_generated_consumed, energy_to_storage, energy_from_storage, energy_diverted, betafactor, zone_dict, zone_list, hc_system_dict, hot_water_dict, ductwork_gains)
+cond200=>condition: if heat_balance
+op204=>operation: hour_per_step = project_dict['SimulationTime']['step']
+cond207=>condition: for (hb_name, hb_dict) in heat_balance_dict.items()
+op216=>operation: heat_balance_output_file = (((output_file_name_stub + 'results_heat_balance_') + hb_name) + '.csv')
+sub218=>subroutine: write_heat_balance_output_file(heat_balance_output_file, timestep_array, hour_per_step, hb_dict)
+cond226=>condition: if detailed_output_heating_cooling
+cond231=>condition: for (heat_source_wet_name, heat_source_wet_results) in heat_source_wet_results_dict.items()
+op240=>operation: heat_source_wet_output_file = (((output_file_name_stub + 'results_heat_source_wet__') + heat_source_wet_name) + '.csv')
+sub242=>subroutine: write_heat_source_wet_output_file(heat_source_wet_output_file, timestep_array, heat_source_wet_results)
+cond247=>condition: for (heat_source_wet_name, heat_source_wet_results_annual) in heat_source_wet_results_annual_dict.items()
+op256=>operation: heat_source_wet_output_file = (((output_file_name_stub + 'results_heat_source_wet_summary__') + heat_source_wet_name) + '.csv')
+sub258=>subroutine: write_heat_source_wet_summary_output_file(heat_source_wet_output_file, heat_source_wet_results_annual)
+op265=>operation: space_heat_demand_total = sum((sum(h_dem) for h_dem in zone_dict['Space heat demand'].values()))
+op267=>operation: space_cool_demand_total = sum((sum(c_dem) for c_dem in zone_dict['Space cool demand'].values()))
+op269=>operation: total_floor_area = project.total_floor_area()
+op271=>operation: daily_hw_demand = units.convert_profile_to_daily(hot_water_dict['Hot water energy demand incl pipework_loss']['energy_demand_incl_pipework_loss'], project_dict['SimulationTime']['step'])
+op273=>operation: daily_hw_demand_75th_percentile = np.percentile(daily_hw_demand, 75)
+sub275=>subroutine: write_core_output_file_summary(output_file_summary, project_dict, timestep_array, results_end_user, energy_generated_consumed, energy_to_storage, energy_from_storage, energy_diverted, energy_import, energy_export, space_heat_demand_total, space_cool_demand_total, total_floor_area, heat_cop_dict, cool_cop_dict, dhw_cop_dict, daily_hw_demand_75th_percentile)
+cond278=>condition: if (fhs_assumptions or fhs_notA_assumptions or fhs_notB_assumptions)
+cond283=>condition: if (fhs_notA_assumptions or fhs_notB_assumptions)
+op287=>operation: notional = True
+sub294=>subroutine: apply_fhs_postprocessing(project_dict, results_totals, energy_import, energy_export, results_end_user, timestep_array, output_file_name_stub, notional)
+sub311=>subroutine: shutil.copy2(inp_filename, results_folder)
+e313=>end: end run_project
+st317=>start: start write_static_output_file
+io319=>inputoutput: input: output_file, heat_trans_coeff, heat_loss_param, heat_capacity_param, heat_loss_form_factor
+op322=>operation: with open(output_file, 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['Heat transfer coefficient', 'W / K', heat_trans_coeff])
+    writer.writerow(['Heat loss parameter', 'W / m2.K', heat_loss_param])
+    writer.writerow(['Heat capacity parameter', 'kJ / m2.K', heat_capacity_param])
+    writer.writerow(['Heat loss form factor', '', heat_loss_form_factor])
+e324=>end: end write_static_output_file
+st328=>start: start write_heat_balance_output_file
+io330=>inputoutput: input: heat_balance_output_file, timestep_array, hour_per_step, heat_balance_dict
+op333=>operation: with open(heat_balance_output_file, 'w', newline='') as f:
+    writer = csv.writer(f)
+    headings = ['Timestep']
+    units_row = ['index']
+    rows = ['']
+    headings_annual = ['']
+    units_annual = ['']
+    nbr_of_zones = 0
+    for (z_name, heat_loss_gain_dict) in heat_balance_dict.items():
+        for heat_loss_gain_name in heat_loss_gain_dict.keys():
+            headings.append(((z_name + ': ') + heat_loss_gain_name))
+            units_row.append('[W]')
+        nbr_of_zones += 1
+    for (z_name, heat_loss_gain_dict) in heat_balance_dict.items():
+        annual_totals = ([0] * (len(heat_loss_gain_dict.keys()) * nbr_of_zones))
+        annual_totals.insert(0, '')
+        for heat_loss_gain_name in heat_loss_gain_dict.keys():
+            headings_annual.append(((z_name + ': total ') + heat_loss_gain_name))
+            units_annual.append('[kWh]')
+    for (t_idx, timestep) in enumerate(timestep_array):
+        row = [t_idx]
+        annual_totals_index = 1
+        for (z_name, heat_loss_gain_dict) in heat_balance_dict.items():
+            for heat_loss_gain_name in heat_loss_gain_dict.keys():
+                row.append(heat_loss_gain_dict[heat_loss_gain_name][t_idx])
+                annual_totals[annual_totals_index] += ((heat_loss_gain_dict[heat_loss_gain_name][t_idx] * hour_per_step) / units.W_per_kW)
+                annual_totals_index += 1
+        rows.append(row)
+    writer.writerow(headings_annual)
+    writer.writerow(units_annual)
+    writer.writerow(annual_totals)
+    writer.writerow([''])
+    writer.writerow(headings)
+    writer.writerow(units_row)
+    writer.writerows(rows)
+e335=>end: end write_heat_balance_output_file
+st339=>start: start write_heat_source_wet_output_file
+io341=>inputoutput: input: output_file, timestep_array, heat_source_wet_results
+op344=>operation: col_headings = ['Timestep count']
+op346=>operation: col_units_row = ['']
+op348=>operation: columns = {}
+cond351=>condition: for (service_name, service_results) in heat_source_wet_results.items()
+op362=>operation: columns[service_name] = [col for col in service_results.keys()]
+op364=>operation: col_headings += [col_heading for (col_heading, _) in columns[service_name]]
+op366=>operation: col_units_row += [col_unit for (_, col_unit) in columns[service_name]]
+op370=>operation: with open(output_file, 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(col_headings)
+    writer.writerow(col_units_row)
+    for t_idx in range(0, len(timestep_array)):
+        row = [t_idx]
+        for (service_name, service_results) in heat_source_wet_results.items():
+            row += [service_results[col][t_idx] for col in columns[service_name]]
+        writer.writerow(row)
+e372=>end: end write_heat_source_wet_output_file
+st376=>start: start write_heat_source_wet_summary_output_file
+io378=>inputoutput: input: output_file, heat_source_wet_results_annual
+op381=>operation: with open(output_file, 'w', newline='') as f:
+    writer = csv.writer(f)
+    for (service_name, service_results) in heat_source_wet_results_annual.items():
+        writer.writerow((service_name,))
+        for (name, value) in service_results.items():
+            writer.writerow((name[0], name[1], value))
+        writer.writerow('')
+e383=>end: end write_heat_source_wet_summary_output_file
+st387=>start: start write_core_output_file
+io389=>inputoutput: input: output_file, timestep_array, results_totals, results_end_user, energy_import, energy_export, energy_generated_consumed, energy_to_storage, energy_from_storage, energy_diverted, betafactor, zone_dict, zone_list, hc_system_dict, hot_water_dict, ductwork_gains
+op392=>operation: with open(output_file, 'w', newline='') as f:
+    writer = csv.writer(f)
+    headings = ['Timestep']
+    units_row = ['[count]']
+    for totals_key in results_totals.keys():
+        totals_header = str(totals_key)
+        totals_header = (totals_header + ' total')
+        headings.append(totals_header)
+        units_row.append('[kWh]')
+        for end_user_key in results_end_user[totals_key].keys():
+            headings.append(end_user_key)
+            units_row.append('[kWh]')
+        headings.append((str(totals_key) + ' import'))
+        units_row.append('[kWh]')
+        headings.append((str(totals_key) + ' export'))
+        units_row.append('[kWh]')
+        headings.append((str(totals_key) + ' generated and consumed'))
+        units_row.append('[kWh]')
+        headings.append((str(totals_key) + ' beta factor'))
+        units_row.append('[ratio]')
+        headings.append((str(totals_key) + ' to storage'))
+        units_row.append('[kWh]')
+        headings.append((str(totals_key) + ' from storage'))
+        units_row.append('[kWh]')
+        headings.append((str(totals_key) + ' diverted'))
+        units_row.append('[kWh]')
+    unitsDict = {'Internal gains': '[W]', 'Solar gains': '[W]', 'Operative temp': '[deg C]', 'Internal air temp': '[deg C]', 'Space heat demand': '[kWh]', 'Space cool demand': '[kWh]', 'Hot water demand': '[litres]', 'Hot water energy demand': '[kWh]', 'Hot water duration': '[mins]', 'Hot Water Events': '[count]', 'Pipework losses': '[kWh]'}
+    for zone in zone_list:
+        for zone_outputs in zone_dict.keys():
+            zone_headings = ((zone_outputs + ' ') + zone)
+            headings.append(zone_headings)
+            if (zone_outputs in unitsDict):
+                units_row.append(unitsDict.get(zone_outputs))
+            else:
+                this_filename = os.path.basename(__file__)
+                units_row.append((('Unit not defined (unitsDict ' + this_filename) + ')'))
+    for system in hc_system_dict:
+        for hc_name in hc_system_dict[system].keys():
+            if (hc_name == None):
+                hc_name = 'None'
+                hc_system_headings = ((system + ' ') + hc_name)
+            else:
+                hc_system_headings = ((system + ' ') + hc_name)
+            headings.append(hc_system_headings)
+            units_row.append('[kWh]')
+    for system in hot_water_dict:
+        headings.append(system)
+        if (system in unitsDict):
+            units_row.append(unitsDict.get(system))
+        else:
+            this_filename = os.path.basename(__file__)
+            units_row.append((('Unit not defined (add to unitsDict ' + this_filename) + ')'))
+    headings.append('Ductwork gains')
+    units_row.append('[kWh]')
+    writer.writerow(headings)
+    writer.writerow(units_row)
+    for (t_idx, timestep) in enumerate(timestep_array):
+        energy_use_row = []
+        zone_row = []
+        hc_system_row = []
+        hw_system_row = []
+        hw_system_row_energy = []
+        hw_system_row_duration = []
+        hw_system_row_events = []
+        pw_losses_row = []
+        ductwork_row = []
+        energy_shortfall = []
+        i = 0
+        for totals_key in results_totals:
+            energy_use_row.append(results_totals[totals_key][t_idx])
+            for end_user_key in results_end_user[totals_key]:
+                energy_use_row.append(results_end_user[totals_key][end_user_key][t_idx])
+            energy_use_row.append(energy_import[totals_key][t_idx])
+            energy_use_row.append(energy_export[totals_key][t_idx])
+            energy_use_row.append(energy_generated_consumed[totals_key][t_idx])
+            energy_use_row.append(betafactor[totals_key][t_idx])
+            energy_use_row.append(energy_to_storage[totals_key][t_idx])
+            energy_use_row.append(energy_from_storage[totals_key][t_idx])
+            energy_use_row.append(energy_diverted[totals_key][t_idx])
+        for zone in zone_list:
+            for zone_outputs in zone_dict:
+                zone_row.append(zone_dict[zone_outputs][zone][t_idx])
+        for system in hc_system_dict:
+            for hc_name in hc_system_dict[system]:
+                hc_system_row.append(hc_system_dict[system][hc_name][t_idx])
+        hw_system_row.append(hot_water_dict['Hot water demand']['demand'][t_idx])
+        hw_system_row_energy.append(hot_water_dict['Hot water energy demand']['energy_demand'][t_idx])
+        hw_system_row_duration.append(hot_water_dict['Hot water duration']['duration'][t_idx])
+        pw_losses_row.append(hot_water_dict['Pipework losses']['pw_losses'][t_idx])
+        hw_system_row_events.append(hot_water_dict['Hot Water Events']['no_events'][t_idx])
+        ductwork_row.append(ductwork_gains['ductwork_gains'][t_idx])
+        row = (((((((((([t_idx] + energy_use_row) + zone_row) + hc_system_row) + hw_system_row) + hw_system_row_energy) + hw_system_row_duration) + hw_system_row_events) + pw_losses_row) + ductwork_row) + energy_shortfall)
+        writer.writerow(row)
+e394=>end: end write_core_output_file
+st398=>start: start write_core_output_file_summary
+io400=>inputoutput: input: output_file_summary, project_dict, timestep_array, results_end_user, energy_generated_consumed, energy_to_storage, energy_from_storage, energy_diverted, energy_import, energy_export, space_heat_demand_total, space_cool_demand_total, total_floor_area, heat_cop_dict, cool_cop_dict, dhw_cop_dict, daily_hw_demand_75th_percentile
+op403=>operation: elec_generated = 0
+op405=>operation: elec_consumed = 0
+cond408=>condition: for (end_use, arr) in results_end_user['mains elec'].items()
+cond426=>condition: if (sum(arr) < 0)
+op430=>operation: elec_generated += abs(sum(arr))
+op434=>operation: elec_consumed += sum(arr)
+op439=>operation: gen_to_consumption = sum(energy_generated_consumed['mains elec'])
+op441=>operation: grid_to_consumption = sum(energy_import['mains elec'])
+op443=>operation: generation_to_grid = abs(sum(energy_export['mains elec']))
+op445=>operation: net_import = (grid_to_consumption - generation_to_grid)
+op447=>operation: gen_to_storage = sum(energy_to_storage['mains elec'])
+op449=>operation: storage_to_consumption = abs(sum(energy_from_storage['mains elec']))
+op451=>operation: gen_to_diverter = sum(energy_diverted['mains elec'])
+cond454=>condition: if (gen_to_storage > 0.0)
+op458=>operation: storage_eff = (storage_to_consumption / gen_to_storage)
+op465=>operation: start_timestep = project_dict['SimulationTime']['start']
+op467=>operation: stepping = project_dict['SimulationTime']['step']
+op469=>operation: net_import_per_timestep = [(energy_import['mains elec'][i] + energy_export['mains elec'][i]) for i in range(len(timestep_array))]
+op471=>operation: peak_elec_consumption = max(net_import_per_timestep)
+op473=>operation: index_peak_elec_consumption = net_import_per_timestep.index(peak_elec_consumption)
+op475=>operation: step_peak_elec_consumption = (index_peak_elec_consumption + start_timestep)
+op477=>operation: HOURS_TO_END_JAN = 744
+op479=>operation: HOURS_TO_END_FEB = 1416
+op481=>operation: HOURS_TO_END_MAR = 2160
+op483=>operation: HOURS_TO_END_APR = 2880
+op485=>operation: HOURS_TO_END_MAY = 3624
+op487=>operation: HOURS_TO_END_JUN = 4344
+op489=>operation: HOURS_TO_END_JUL = 5088
+op491=>operation: HOURS_TO_END_AUG = 5832
+op493=>operation: HOURS_TO_END_SEP = 6552
+op495=>operation: HOURS_TO_END_OCT = 7296
+op497=>operation: HOURS_TO_END_NOV = 8016
+op499=>operation: HOURS_TO_END_DEC = 8760
+op501=>operation: months_start_end_timesteps = {'JAN': (0, ((HOURS_TO_END_JAN / stepping) - 1)), 'FEB': ((HOURS_TO_END_JAN / stepping), ((HOURS_TO_END_FEB / stepping) - 1)), 'MAR': ((HOURS_TO_END_FEB / stepping), ((HOURS_TO_END_MAR / stepping) - 1)), 'APR': ((HOURS_TO_END_MAR / stepping), ((HOURS_TO_END_APR / stepping) - 1)), 'MAY': ((HOURS_TO_END_APR / stepping), ((HOURS_TO_END_MAY / stepping) - 1)), 'JUN': ((HOURS_TO_END_MAY / stepping), ((HOURS_TO_END_JUN / stepping) - 1)), 'JUL': ((HOURS_TO_END_JUN / stepping), ((HOURS_TO_END_JUL / stepping) - 1)), 'AUG': ((HOURS_TO_END_JUL / stepping), ((HOURS_TO_END_AUG / stepping) - 1)), 'SEP': ((HOURS_TO_END_AUG / stepping), ((HOURS_TO_END_SEP / stepping) - 1)), 'OCT': ((HOURS_TO_END_SEP / stepping), ((HOURS_TO_END_OCT / stepping) - 1)), 'NOV': ((HOURS_TO_END_OCT / stepping), ((HOURS_TO_END_NOV / stepping) - 1)), 'DEC': ((HOURS_TO_END_NOV / stepping), ((HOURS_TO_END_DEC / stepping) - 1))}
+op503=>operation: timestep_to_date = {}
+op505=>operation: step = start_timestep
+cond508=>condition: for hour_of_year in timestep_array
+cond564=>condition: for (month, start_end) in months_start_end_timesteps.items()
+cond590=>condition: if ((step <= int(start_end[1])) and (step >= int(start_end[0])))
+op594=>operation: hour_of_year = (step * stepping)
+op596=>operation: hour_start_month = (start_end[0] * stepping)
+op598=>operation: hour_of_month = (hour_of_year - hour_start_month)
+op600=>operation: day_of_month = (floor((hour_of_month / 24)) + 1)
+op602=>operation: hour_of_day = (((step % (24 / stepping)) * stepping) + 1)
+op604=>operation: timestep_to_date[step] = {'month': month, 'day': day_of_month, 'hour': hour_of_day}
+op611=>operation: step += 1
+op615=>operation: delivered_energy_dict = {'total': {'total': 0}}
+cond618=>condition: for (fuel, end_uses) in results_end_user.items()
+cond696=>condition: if (fuel not in ['_unmet_demand', 'hw cylinder'])
+op700=>operation: delivered_energy_dict[fuel] = {}
+op702=>operation: delivered_energy_dict[fuel]['total'] = 0
+cond705=>condition: for (end_use, delivered_energy) in end_uses.items()
+cond737=>condition: if (sum(delivered_energy) >= 0)
+op741=>operation: delivered_energy_dict[fuel][end_use] = sum(delivered_energy)
+op743=>operation: delivered_energy_dict[fuel]['total'] += sum(delivered_energy)
+cond746=>condition: if (end_use not in delivered_energy_dict['total'].keys())
+op750=>operation: delivered_energy_dict['total'][end_use] = sum(delivered_energy)
+op757=>operation: delivered_energy_dict['total']['total'] += sum(delivered_energy)
+op754=>operation: delivered_energy_dict['total'][end_use] += sum(delivered_energy)
+op769=>operation: delivered_energy_rows_title = ['Delivered energy by end-use (below) and fuel (right) [kWh/m2]']
+op771=>operation: delivered_energy_rows = [['total']]
+cond774=>condition: for (fuel, end_uses) in delivered_energy_dict.items()
+sub902=>subroutine: delivered_energy_rows_title.append(fuel)
+cond905=>operation: row.append(0) while  row in delivered_energy_rows
+cond918=>condition: for (end_use, value) in end_uses.items()
+op973=>operation: end_use_found = False
+cond976=>condition: for row in delivered_energy_rows
+cond994=>condition: if (end_use in row)
+op998=>operation: end_use_found = True
+op1000=>operation: row[delivered_energy_rows_title.index(fuel)] = (value / total_floor_area)
+cond1008=>condition: if (not end_use_found)
+op1012=>operation: new_row = ([0] * len(delivered_energy_rows_title))
+op1014=>operation: new_row[0] = end_use
+op1016=>operation: new_row[delivered_energy_rows_title.index(fuel)] = (value / total_floor_area)
+sub1018=>subroutine: delivered_energy_rows.append(new_row)
+op1027=>operation: heat_cop_rows = [(h_name, h_cop) for (h_name, h_cop) in heat_cop_dict.items()]
+op1029=>operation: cool_cop_rows = [(c_name, c_cop) for (c_name, c_cop) in cool_cop_dict.items()]
+op1031=>operation: dhw_cop_rows = [[hw_name, hw_cop] for (hw_name, hw_cop) in dhw_cop_dict.items()]
+op1033=>operation: with open(output_file_summary, 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['Energy Demand Summary'])
+    writer.writerow(['', '', 'Total'])
+    writer.writerow(['Space heat demand', 'kWh/m2', (space_heat_demand_total / total_floor_area)])
+    writer.writerow(['Space cool demand', 'kWh/m2', (space_cool_demand_total / total_floor_area)])
+    writer.writerow([])
+    writer.writerow(['Electricity Summary'])
+    writer.writerow(['', 'kWh', 'timestep', 'month', 'day', 'hour of day'])
+    writer.writerow(['Peak half-hour consumption', peak_elec_consumption, index_peak_elec_consumption, timestep_to_date[step_peak_elec_consumption]['month'], timestep_to_date[step_peak_elec_consumption]['day'], timestep_to_date[step_peak_elec_consumption]['hour']])
+    writer.writerow(['', '', 'Total'])
+    writer.writerow(['Consumption', 'kWh', elec_consumed])
+    writer.writerow(['Generation', 'kWh', elec_generated])
+    writer.writerow(['Generation to consumption (immediate, excl. diverter)', 'kWh', gen_to_consumption])
+    writer.writerow(['Generation to storage', 'kWh', gen_to_storage])
+    writer.writerow(['Generation to diverter', 'kWh', gen_to_diverter])
+    writer.writerow(['Generation to grid (export)', 'kWh', generation_to_grid])
+    writer.writerow(['Storage to consumption', 'kWh', storage_to_consumption])
+    writer.writerow(['Grid to consumption (import)', 'kWh', grid_to_consumption])
+    writer.writerow(['Net import', 'kWh', net_import])
+    writer.writerow(['Storage round-trip efficiency', 'ratio', storage_eff])
+    writer.writerow([])
+    writer.writerow(['Delivered Energy Summary'])
+    writer.writerow(delivered_energy_rows_title)
+    writer.writerows(delivered_energy_rows)
+    if dhw_cop_rows:
+        writer.writerow([])
+        writer.writerow(['Hot water system', 'Overall CoP', 'Daily HW demand (kWh, 75th percentile)', 'HW cylinder volume (litres)'])
+        for row in dhw_cop_rows:
+            row.append(daily_hw_demand_75th_percentile)
+            if (project_dict['HotWaterSource'][row[0]]['type'] == 'StorageTank'):
+                row.append(project_dict['HotWaterSource'][row[0]]['volume'])
+            else:
+                row.append('N/A')
+        writer.writerows(dhw_cop_rows)
+    if heat_cop_rows:
+        writer.writerow([])
+        writer.writerow(['Space heating system', 'Overall CoP'])
+        writer.writerows(heat_cop_rows)
+    if cool_cop_rows:
+        writer.writerow([])
+        writer.writerow(['Space cooling system', 'Overall CoP'])
+        writer.writerows(cool_cop_rows)
+e1035=>end: end write_core_output_file_summary
+cond1039=>condition: if (__name__ == '__main__')
+op1043=>operation: parser = argparse.ArgumentParser(description='Home Energy Model (HEM)')
+sub1045=>subroutine: parser.add_argument('--epw-file', '-w', action='store', default=None, help='path to weather file in .epw format')
+sub1047=>subroutine: parser.add_argument('--CIBSE-weather-file', action='store', default=None, help='path to CIBSE weather file in .csv format')
+sub1049=>subroutine: parser.add_argument('input_file', nargs='+', help='path(s) to file(s) containing building specifications to run')
+sub1051=>subroutine: parser.add_argument('--parallel', '-p', action='store', type=int, default=0, help='run calculations for different input files in parallel(specify no of files to run simultaneously)')
+sub1053=>subroutine: parser.add_argument('--preprocess-only', action='store_true', default=False, help='run prepocessing step only')
+op1055=>operation: wrapper_options = parser.add_mutually_exclusive_group()
+sub1057=>subroutine: wrapper_options.add_argument('--future-homes-standard', action='store_true', default=False, help='use Future Homes Standard calculation assumptions')
+sub1059=>subroutine: wrapper_options.add_argument('--future-homes-standard-FEE', action='store_true', default=False, help='use Future Homes Standard Fabric Energy Efficiency assumptions')
+sub1061=>subroutine: wrapper_options.add_argument('--future-homes-standard-notA', action='store_true', default=False, help='use Future Homes Standard calculation assumptions for notional option A')
+sub1063=>subroutine: wrapper_options.add_argument('--future-homes-standard-notB', action='store_true', default=False, help='use Future Homes Standard calculation assumptions for notional option B')
+sub1065=>subroutine: wrapper_options.add_argument('--future-homes-standard-FEE-notA', action='store_true', default=False, help='use Future Homes Standard Fabric Energy Efficiency assumptions for notional option A')
+sub1067=>subroutine: wrapper_options.add_argument('--future-homes-standard-FEE-notB', action='store_true', default=False, help='use Future Homes Standard Fabric Energy Efficiency assumptions for notional option B')
+sub1069=>subroutine: parser.add_argument('--heat-balance', action='store_true', default=False, help='output heat balance for each zone')
+sub1071=>subroutine: parser.add_argument('--detailed-output-heating-cooling', action='store_true', default=False, help='output detailed calculation results for heating and cooling system objects (including HeatSourceWet objects) where the relevant objects have this functionality')
+sub1073=>subroutine: parser.add_argument('--no-fast-solver', action='store_true', default=False, help='disable optimised solver (results may differ slightly due to reordering of floating-point ops); this option is provided to facilitate verification and debugging of the optimised version')
+op1075=>operation: cli_args = parser.parse_args()
+op1077=>operation: inp_filenames = cli_args.input_file
+op1079=>operation: epw_filename = cli_args.epw_file
+op1081=>operation: cibse_weather_filename = cli_args.CIBSE_weather_file
+op1083=>operation: fhs_assumptions = cli_args.future_homes_standard
+op1085=>operation: fhs_FEE_assumptions = cli_args.future_homes_standard_FEE
+op1087=>operation: fhs_notA_assumptions = cli_args.future_homes_standard_notA
+op1089=>operation: fhs_notB_assumptions = cli_args.future_homes_standard_notB
+op1091=>operation: fhs_FEE_notA_assumptions = cli_args.future_homes_standard_FEE_notA
+op1093=>operation: fhs_FEE_notB_assumptions = cli_args.future_homes_standard_FEE_notB
+op1095=>operation: preproc_only = cli_args.preprocess_only
+op1097=>operation: heat_balance = cli_args.heat_balance
+op1099=>operation: detailed_output_heating_cooling = cli_args.detailed_output_heating_cooling
+op1101=>operation: use_fast_solver = (not cli_args.no_fast_solver)
+cond1104=>condition: if (epw_filename is not None)
+op1108=>operation: external_conditions_dict = weather_data_to_dict(epw_filename)
+cond1126=>condition: if (cli_args.parallel == 0)
+sub1130=>subroutine: print((('Running ' + str(len(inp_filenames))) + ' cases in series'))
+cond1133=>operation: run_project(inpfile, external_conditions_dict, preproc_only, fhs_assumptions, fhs_FEE_assumptions, fhs_notA_assumptions, fhs_notB_assumptions, fhs_FEE_notA_assumptions, fhs_FEE_notB_assumptions, heat_balance, detailed_output_heating_cooling, use_fast_solver) while  inpfile in inp_filenames
+op1147=>operation: import multiprocessing as mp
+sub1149=>subroutine: print((((('Running ' + str(len(inp_filenames))) + ' cases in parallel (') + str(cli_args.parallel)) + ' at a time)'))
+op1151=>operation: run_project_args = [(inpfile, external_conditions_dict, preproc_only, fhs_assumptions, fhs_FEE_assumptions, heat_balance, detailed_output_heating_cooling, use_fast_solver) for inpfile in inp_filenames]
+op1153=>operation: with mp.Pool(processes=cli_args.parallel) as p:
+    p.starmap(run_project, run_project_args)
+cond1113=>condition: if (cibse_weather_filename is not None)
+op1117=>operation: external_conditions_dict = CIBSE_weather_data_to_dict(cibse_weather_filename)
+op1121=>operation: external_conditions_dict = None
+op462=>operation: storage_eff = 'DIV/0'
+op291=>operation: notional = False
+cond299=>condition: if (fhs_FEE_assumptions or fhs_FEE_notA_assumptions or fhs_FEE_notB_assumptions)
+op303=>operation: postprocfile = (output_file_name_stub + 'postproc.csv')
+sub305=>subroutine: apply_fhs_FEE_postprocessing(postprocfile, total_floor_area, space_heat_demand_total, space_cool_demand_total)
+cond156=>operation: project_dict = apply_fhs_FEE_preprocessing(project_dict) if  (fhs_FEE_assumptions or fhs_FEE_notA_assumptions or fhs_FEE_notB_assumptions)
+cond58=>condition: if fhs_FEE_assumptions
+op62=>operation: output_file_run_name = 'FHS_FEE'
+cond67=>condition: if fhs_notA_assumptions
+op71=>operation: output_file_run_name = 'FHS_notA'
+cond76=>condition: if fhs_notB_assumptions
+op80=>operation: output_file_run_name = 'FHS_notB'
+cond85=>condition: if fhs_FEE_notA_assumptions
+op89=>operation: output_file_run_name = 'FHS_FEE_notA'
+cond94=>condition: if fhs_FEE_notB_assumptions
+op98=>operation: output_file_run_name = 'FHS_FEE_notB'
+op102=>operation: output_file_run_name = 'core'
+
+op2->op4
+op4->op6
+op6->op8
+op8->op10
+op10->op12
+op12->op14
+op14->op16
+op16->op18
+op18->op20
+op20->op22
+op22->op24
+op24->op26
+op26->op28
+op28->op30
+op30->op32
+op32->st35
+st35->io37
+io37->op40
+op40->op42
+op42->op44
+op44->sub46
+sub46->cond49
+cond49(yes)->op53
+op53->op110
+op110->op112
+op112->op114
+op114->op116
+op116->op118
+op118->cond121
+cond121(yes)->op125
+op125->op127
+op127->op129
+op129->cond135
+cond135(yes)->sub139
+sub139->op141
+op141->cond147
+cond147(yes)->op151
+op151->cond168
+cond168(yes)->op172
+op172->op174
+op174->sub176
+sub176->e179
+cond168(no)->op185
+op185->op187
+op187->op189
+op189->op191
+op191->sub193
+sub193->op195
+op195->sub197
+sub197->cond200
+cond200(yes)->op204
+op204->cond207
+cond207(yes)->op216
+op216->sub218
+sub218(left)->cond207
+cond207(no)->cond226
+cond226(yes)->cond231
+cond231(yes)->op240
+op240->sub242
+sub242(left)->cond231
+cond231(no)->cond247
+cond247(yes)->op256
+op256->sub258
+sub258(left)->cond247
+cond247(no)->op265
+op265->op267
+op267->op269
+op269->op271
+op271->op273
+op273->sub275
+sub275->cond278
+cond278(yes)->cond283
+cond283(yes)->op287
+op287->sub294
+sub294->sub311
+sub311->e313
+e313->st317
+st317->io319
+io319->op322
+op322->e324
+e324->st328
+st328->io330
+io330->op333
+op333->e335
+e335->st339
+st339->io341
+io341->op344
+op344->op346
+op346->op348
+op348->cond351
+cond351(yes)->op362
+op362->op364
+op364->op366
+op366(left)->cond351
+cond351(no)->op370
+op370->e372
+e372->st376
+st376->io378
+io378->op381
+op381->e383
+e383->st387
+st387->io389
+io389->op392
+op392->e394
+e394->st398
+st398->io400
+io400->op403
+op403->op405
+op405->cond408
+cond408(yes)->cond426
+cond426(yes)->op430
+op430->cond408
+cond426(no)->op434
+op434->cond408
+cond408(no)->op439
+op439->op441
+op441->op443
+op443->op445
+op445->op447
+op447->op449
+op449->op451
+op451->cond454
+cond454(yes)->op458
+op458->op465
+op465->op467
+op467->op469
+op469->op471
+op471->op473
+op473->op475
+op475->op477
+op477->op479
+op479->op481
+op481->op483
+op483->op485
+op485->op487
+op487->op489
+op489->op491
+op491->op493
+op493->op495
+op495->op497
+op497->op499
+op499->op501
+op501->op503
+op503->op505
+op505->cond508
+cond508(yes)->cond564
+cond564(yes)->cond590
+cond590(yes)->op594
+op594->op596
+op596->op598
+op598->op600
+op600->op602
+op602->op604
+op604->cond564
+cond590(no)->cond564
+cond564(no)->op611
+op611(left)->cond508
+cond508(no)->op615
+op615->cond618
+cond618(yes)->cond696
+cond696(yes)->op700
+op700->op702
+op702->cond705
+cond705(yes)->cond737
+cond737(yes)->op741
+op741->op743
+op743->cond746
+cond746(yes)->op750
+op750->op757
+op757->cond705
+cond746(no)->op754
+op754->op757
+cond737(no)->cond705
+cond705(no)->cond618
+cond696(no)->cond618
+cond618(no)->op769
+op769->op771
+op771->cond774
+cond774(yes)->sub902
+sub902->cond905
+cond905->cond918
+cond918(yes)->op973
+op973->cond976
+cond976(yes)->cond994
+cond994(yes)->op998
+op998->op1000
+op1000->cond976
+cond994(no)->cond976
+cond976(no)->cond1008
+cond1008(yes)->op1012
+op1012->op1014
+op1014->op1016
+op1016->sub1018
+sub1018->cond918
+cond1008(no)->cond918
+cond918(no)->cond774
+cond774(no)->op1027
+op1027->op1029
+op1029->op1031
+op1031->op1033
+op1033->e1035
+e1035->cond1039
+cond1039(yes)->op1043
+op1043->sub1045
+sub1045->sub1047
+sub1047->sub1049
+sub1049->sub1051
+sub1051->sub1053
+sub1053->op1055
+op1055->sub1057
+sub1057->sub1059
+sub1059->sub1061
+sub1061->sub1063
+sub1063->sub1065
+sub1065->sub1067
+sub1067->sub1069
+sub1069->sub1071
+sub1071->sub1073
+sub1073->op1075
+op1075->op1077
+op1077->op1079
+op1079->op1081
+op1081->op1083
+op1083->op1085
+op1085->op1087
+op1087->op1089
+op1089->op1091
+op1091->op1093
+op1093->op1095
+op1095->op1097
+op1097->op1099
+op1099->op1101
+op1101->cond1104
+cond1104(yes)->op1108
+op1108->cond1126
+cond1126(yes)->sub1130
+sub1130->cond1133
+cond1126(no)->op1147
+op1147->sub1149
+sub1149->op1151
+op1151->op1153
+cond1104(no)->cond1113
+cond1113(yes)->op1117
+op1117->cond1126
+cond1113(no)->op1121
+op1121->cond1126
+cond454(no)->op462
+op462->op465
+cond283(no)->op291
+op291->sub294
+cond278(no)->cond299
+cond299(yes)->op303
+op303->sub305
+sub305->sub311
+cond299(no)->sub311
+cond226(no)->op265
+cond200(no)->cond226
+cond147(no)->cond156
+cond156->cond168
+cond135(no)->cond147
+cond121(no)->cond135
+cond49(no)->cond58
+cond58(yes)->op62
+op62->op110
+cond58(no)->cond67
+cond67(yes)->op71
+op71->op110
+cond67(no)->cond76
+cond76(yes)->op80
+op80->op110
+cond76(no)->cond85
+cond85(yes)->op89
+op89->op110
+cond85(no)->cond94
+cond94(yes)->op98
+op98->op110
+cond94(no)->op102
+op102->op110
+</textarea></div>
+        <div><button id="run" type="button">Run</button> <button onclick="HelpText()">Format Help</button></div>
+        <div id="HelpTextBlock" style="display:none"><br/>Conditions can also be redirected like cond(yes, bottom) or cond(yes, right)
+... and the other symbols too... like sub1(right)<br/>
+You can also tweak the <b>diagram.drawSVG('diagram', {});</b> script in this file for more changes<br/>
+This is based on <a href="https://github.com/adrai/flowchart.js">flowchart.js on github</a> and <a href="http://flowchart.js.org">http://flowchart.js.org</a> more documentation can be found over there.
+</div><br/><div id="svgbase64"></div>
+        <div id="pngbase64"></div>
+
+        <div id="canvas"></div>
+    </body>
+</html>
